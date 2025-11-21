@@ -1,12 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { 
-  ArrowLeft, 
   Settings2, 
   Calendar, 
-  Clock, 
-  Map as MapIcon, 
   Wind, 
   Thermometer, 
   Layers,
@@ -14,6 +10,7 @@ import {
   Github
 } from 'lucide-react';
 import WindFieldVisualization from './WindFieldVisualization';
+import Navbar from './navbar';
 import './App.css';
 
 // 获取昨日 UTC 日期（格式：YYYYMMDD）
@@ -40,7 +37,6 @@ const formatDateFromInput = (dateStr) => {
 };
 
 const WindApp = () => {
-  const navigate = useNavigate();
   const [settings, setSettings] = useState({
     heatmapPreset: 'normal',
     particleDensity: 128,
@@ -54,7 +50,6 @@ const WindApp = () => {
   const [tempSettings, setTempSettings] = useState(settings);
   const [visualizationKey, setVisualizationKey] = useState(0);
   const visualizationRef = useRef(null);
-  const [vizHeight, setVizHeight] = useState('auto');
 
   // 处理 batch 改变
   const handleBatchChange = (newBatch) => {
@@ -77,43 +72,6 @@ const WindApp = () => {
     setSettings(newSettings);
   };
 
-  // 监听左侧可视化区域高度变化
-  useEffect(() => {
-    const updateHeight = () => {
-      if (visualizationRef.current) {
-        const height = visualizationRef.current.offsetHeight;
-        setVizHeight(`${height}px`);
-      }
-    };
-
-    // 初始化
-    updateHeight();
-
-    // 监听窗口大小变化
-    window.addEventListener('resize', updateHeight);
-    
-    // 使用 MutationObserver 监听 DOM 变化
-    const observer = new MutationObserver(updateHeight);
-    if (visualizationRef.current) {
-      observer.observe(visualizationRef.current, {
-        childList: true,
-        subtree: true,
-        attributes: true
-      });
-    }
-
-    // 延迟更新以确保渲染完成
-    const timer = setTimeout(updateHeight, 100);
-    const interval = setInterval(updateHeight, 500);
-
-    return () => {
-      window.removeEventListener('resize', updateHeight);
-      observer.disconnect();
-      clearTimeout(timer);
-      clearInterval(interval);
-    };
-  }, [visualizationKey]);
-
   // 获取最大日期
   const getMaxDate = () => {
     const today = new Date();
@@ -122,8 +80,21 @@ const WindApp = () => {
     return yesterday.toISOString().split('T')[0];
   };
 
+  // 导航栏页面列表
+  const navPages = [
+    { name: '首页', url: '/' },
+    { name: '风场可视化', url: '/app' },
+    { name: '数据统计', url: '/stats' },
+  ];
+
   return (
-    <div className="min-h-screen w-full bg-[#F5F9FC] relative font-sans text-slate-700">
+    <div className="h-screen w-full bg-[#F5F9FC] relative font-sans text-slate-700 overflow-hidden">
+      
+      {/* 导航栏 */}
+      <Navbar 
+        pages={navPages}
+        githubUrl="https://github.com/lxbme/Windel"
+      />
       
       {/* --- 背景动效 (与 LandingPage 保持一致但更淡) --- */}
       <div className="fixed inset-0 z-0 pointer-events-none opacity-50">
@@ -131,40 +102,31 @@ const WindApp = () => {
         <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-cyan-200/30 rounded-full blur-[100px] mix-blend-multiply" />
       </div>
 
-      <div className="flex w-full p-4 gap-4 relative z-10">
-        {/* --- 左侧：风场可视化区域 (固定80%宽度) --- */}
-        <div className="w-[75%] relative">
+      {/* 主内容区域：导航栏下方填充整个视口 */}
+      <div className="flex w-full h-full pt-14 p-4 gap-4 relative z-10">
+        {/* --- 左侧：风场可视化区域 (高度填充，占据主要空间) --- */}
+        <div className="flex-1 h-full min-w-0">
           <motion.div 
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5 }}
-            className="w-full rounded-[2rem] overflow-hidden shadow-2xl shadow-blue-900/5 border border-white/60 bg-white relative group"
+            className="w-full h-full rounded-[2rem] overflow-hidden shadow-2xl shadow-blue-900/5 border border-white/60 bg-white relative group"
           >
-            {/* 返回按钮 (悬浮在地图左上角) */}
-            <button 
-              onClick={() => navigate('/')}
-              className="absolute top-6 left-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/80 backdrop-blur-md border border-white/50 text-slate-600 font-medium shadow-lg shadow-slate-200/50 hover:bg-white hover:text-blue-600 hover:scale-105 transition-all"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back Home</span>
-            </button>
-
             {/* 可视化组件 */}
-            <div ref={visualizationRef} className="w-full">
+            <div ref={visualizationRef} className="w-full h-full">
               <WindFieldVisualization key={visualizationKey} settings={settings} />
             </div>
           </motion.div>
         </div>
 
-        {/* --- 右侧：设置面板 (固定宽度，高度跟随左侧) --- */}
+        {/* --- 右侧：设置面板 (固定宽度) --- */}
         <motion.div 
           initial={{ x: 20, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ delay: 0.2, duration: 0.5 }}
-          className="flex-1 flex flex-col"
-          style={{ height: vizHeight }}
+          className="w-[380px] flex-shrink-0 flex flex-col h-full"
         >
-        <div className="flex-1 flex flex-col bg-white/60 backdrop-blur-xl rounded-[2rem] border border-white/60 shadow-2xl shadow-blue-900/5 overflow-hidden">
+        <div className="flex-1 flex flex-col bg-white/60 backdrop-blur-xl rounded-[2rem] border border-white/60 shadow-2xl shadow-blue-900/5 overflow-hidden h-full">
           
           {/* 面板头部 */}
           <div className="p-6 pb-4 border-b border-slate-200/50">
@@ -182,6 +144,32 @@ const WindApp = () => {
           {/* 可滚动内容区 */}
           <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
             
+            {/* 热力图设置 */}
+            <section>
+              <h3 className="flex items-center gap-2 text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">
+                <Thermometer className="w-4 h-4" /> 热力图模式
+              </h3>
+              <div className="flex bg-slate-100/50 p-1 rounded-xl border border-slate-200/50">
+                {[
+                  { id: 'normal', label: '标准' },
+                  { id: 'high-transparent', label: '通透' },
+                  { id: 'precise', label: '精确' }
+                ].map((mode) => (
+                  <button
+                    key={mode.id}
+                    onClick={() => setSettings({...settings, heatmapPreset: mode.id})}
+                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
+                      settings.heatmapPreset === mode.id
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
+                    }`}
+                  >
+                    {mode.label}
+                  </button>
+                ))}
+              </div>
+            </section>
+
             {/* 数据源设置 */}
             <section>
               <h3 className="flex items-center gap-2 text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">
@@ -333,32 +321,6 @@ const WindApp = () => {
                     className="w-full h-1.5 bg-slate-200 rounded-full appearance-none cursor-pointer accent-blue-500 hover:accent-blue-600"
                   />
                 </div>
-              </div>
-            </section>
-
-            {/* 热力图设置 */}
-            <section>
-              <h3 className="flex items-center gap-2 text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">
-                <Thermometer className="w-4 h-4" /> 热力图模式
-              </h3>
-              <div className="flex bg-slate-100/50 p-1 rounded-xl border border-slate-200/50">
-                {[
-                  { id: 'normal', label: '标准' },
-                  { id: 'high-transparent', label: '通透' },
-                  { id: 'precise', label: '精确' }
-                ].map((mode) => (
-                  <button
-                    key={mode.id}
-                    onClick={() => setSettings({...settings, heatmapPreset: mode.id})}
-                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
-                      settings.heatmapPreset === mode.id
-                        ? 'bg-white text-blue-600 shadow-sm'
-                        : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
-                    }`}
-                  >
-                    {mode.label}
-                  </button>
-                ))}
               </div>
             </section>
 
