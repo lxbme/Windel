@@ -1,6 +1,6 @@
 import React from 'react';
 import { Wind, Github } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 /**
  * Navbar 导航栏组件
@@ -9,6 +9,8 @@ import { Link } from 'react-router-dom';
  * @param {string} props.githubUrl - GitHub 仓库链接
  */
 const Navbar = ({ pages = [], githubUrl = '' }) => {
+  const location = useLocation();
+
   return (
     <nav className="absolute top-0 left-0 right-0 z-50 px-6 py-2 bg-white/30 backdrop-blur-md border-b border-white/40 shadow-sm transition-all duration-300">
       <div className="flex justify-between items-center max-w-[1920px] mx-auto">
@@ -30,15 +32,22 @@ const Navbar = ({ pages = [], githubUrl = '' }) => {
 
           {/* 页面按钮 */}
           <div className="flex items-center gap-1">
-            {pages.map((page, index) => (
-              <Link
-                key={index}
-                to={page.url}
-                className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:text-blue-600 hover:bg-white/60 transition-all duration-200"
-              >
-                {page.name}
-              </Link>
-            ))}
+            {pages.map((page, index) => {
+              const isActive = location.pathname === page.url;
+              return (
+                <Link
+                  key={index}
+                  to={page.url}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    isActive 
+                      ? 'bg-white text-blue-600 shadow-sm' 
+                      : 'text-slate-600 hover:text-blue-600 hover:bg-white/60'
+                  }`}
+                >
+                  {page.name}
+                </Link>
+              );
+            })}
           </div>
         </div>
 

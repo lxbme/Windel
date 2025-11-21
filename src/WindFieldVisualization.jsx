@@ -22,7 +22,7 @@ function WindFieldVisualization({ settings }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [progress, setProgress] = useState(0);
-  const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, data: null });
+  const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, data: null, position: 'bottom-right' });
   
   // 从 props 获取设置或使用默认值
   const heatmapPreset = settings?.heatmapPreset ?? 'normal';
@@ -1161,10 +1161,15 @@ function WindFieldVisualization({ settings }) {
           return directions[index];
         };
 
+        // 判断鼠标是否在容器下半部分
+        const isBottomHalf = mouseY > containerHeight / 5 * 3;
+        const tooltipPosition = isBottomHalf ? 'top-right' : 'bottom-right';
+
         setTooltip({
           visible: true,
           x: event.clientX,
           y: event.clientY,
+          position: tooltipPosition,
           data: {
             lon: nearestPoint.lon.toFixed(2),
             lat: nearestPoint.lat.toFixed(2),
@@ -1176,12 +1181,12 @@ function WindFieldVisualization({ settings }) {
           }
         });
       } else {
-        setTooltip({ visible: false, x: 0, y: 0, data: null });
+        setTooltip({ visible: false, x: 0, y: 0, data: null, position: 'bottom-right' });
       }
     };
 
     const handleMouseLeave = () => {
-      setTooltip({ visible: false, x: 0, y: 0, data: null });
+      setTooltip({ visible: false, x: 0, y: 0, data: null, position: 'bottom-right' });
     };
 
     const container = chartRef.current;
@@ -1327,7 +1332,7 @@ function WindFieldVisualization({ settings }) {
         <div style={{
           position: 'fixed',
           left: tooltip.x + 15,
-          top: tooltip.y + 15,
+          top: tooltip.position === 'top-right' ? tooltip.y - 10 : tooltip.y + 15,
           backgroundColor: 'rgba(255, 255, 255, 0.75)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
@@ -1341,7 +1346,8 @@ function WindFieldVisualization({ settings }) {
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
           border: '1px solid rgba(255, 255, 255, 0.6)',
           minWidth: '200px',
-          fontFamily: 'system-ui, sans-serif'
+          fontFamily: 'system-ui, sans-serif',
+          transform: tooltip.position === 'top-right' ? 'translateY(-100%)' : 'none'
         }}>
           <div style={{ 
             display: 'flex', 
