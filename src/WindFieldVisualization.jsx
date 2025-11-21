@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import * as echarts from 'echarts';
 import 'echarts-gl';
 
@@ -1199,9 +1200,7 @@ function WindFieldVisualization({ settings }) {
     if (loading || error || !windDataRef.current) {
       return { 
         width: '100%',
-        maxWidth: '100%',
         aspectRatio: '16/9',
-        maxHeight: 'calc(100vh - 40px)',
         position: 'relative',
         boxSizing: 'border-box'
       };
@@ -1214,9 +1213,7 @@ function WindFieldVisualization({ settings }) {
     
     return {
       width: '100%',
-      maxWidth: '100%',
       aspectRatio: `${geoAspectRatio}`,
-      maxHeight: 'calc(100vh - 40px)',
       position: 'relative',
       margin: 0,
       padding: 0,
@@ -1315,41 +1312,6 @@ function WindFieldVisualization({ settings }) {
           错误: {error}
         </div>
       )}
-      {/* 风速标签 Tooltip */}
-      {tooltip.visible && tooltip.data && (
-        <div style={{
-          position: 'fixed',
-          left: tooltip.x + 15,
-          top: tooltip.y + 15,
-          backgroundColor: 'rgba(0, 0, 0, 0.85)',
-          color: '#fff',
-          padding: '12px 16px',
-          borderRadius: '6px',
-          fontSize: '14px',
-          lineHeight: '1.6',
-          zIndex: 10000,
-          pointerEvents: 'none',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-          border: '1px solid rgba(255,255,255,0.2)',
-          minWidth: '180px'
-        }}>
-          <div style={{ fontWeight: 'bold', marginBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.3)', paddingBottom: '6px' }}>
-            风场
-          </div>
-          <div style={{ marginBottom: '4px' }}>
-            <span>位置: </span> {tooltip.data.lon}°E, {tooltip.data.lat}°N
-          </div>
-          <div style={{ marginBottom: '4px' }}>
-            <span>风速: </span> <strong>{tooltip.data.speed} m/s</strong>
-          </div>
-          <div style={{ marginBottom: '4px' }}>
-            <span>风向: </span> {tooltip.data.directionName} ({tooltip.data.direction}°)
-          </div>
-          <div style={{ fontSize: '12px', color: '#aaa', marginTop: '6px', paddingTop: '6px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-            U: {tooltip.data.u} m/s | V: {tooltip.data.v} m/s
-          </div>
-        </div>
-      )}
       {/* 风场图层 */}
       <div ref={chartRef} style={{ 
         width: '100%', 
@@ -1359,6 +1321,98 @@ function WindFieldVisualization({ settings }) {
         position: 'relative',
         zIndex: 3
       }}></div>
+      
+      {/* 风速标签 Tooltip - 使用 Portal 渲染到 body 以避免被父容器裁剪或遮挡 */}
+      {tooltip.visible && tooltip.data && createPortal(
+        <div style={{
+          position: 'fixed',
+          left: tooltip.x + 15,
+          top: tooltip.y + 15,
+          backgroundColor: 'rgba(255, 255, 255, 0.75)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          color: '#1e293b', // slate-800
+          padding: '16px',
+          borderRadius: '16px',
+          fontSize: '14px',
+          lineHeight: '1.5',
+          zIndex: 99999,
+          pointerEvents: 'none',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+          border: '1px solid rgba(255, 255, 255, 0.6)',
+          minWidth: '200px',
+          fontFamily: 'system-ui, sans-serif'
+        }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '8px', 
+            marginBottom: '12px', 
+            paddingBottom: '8px', 
+            borderBottom: '1px solid rgba(0, 0, 0, 0.06)' 
+          }}>
+            <div style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              backgroundColor: '#3b82f6', // blue-500
+              boxShadow: '0 0 0 2px rgba(59, 130, 246, 0.2)'
+            }}></div>
+            <span style={{ fontWeight: '600', color: '#0f172a' }}>实时风场数据</span>
+          </div>
+          
+          <div style={{ display: 'grid', gap: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#64748b' }}>经纬度</span>
+              <span style={{ fontFamily: 'monospace', fontWeight: '500' }}>
+                {tooltip.data.lon}°E, {tooltip.data.lat}°N
+              </span>
+            </div>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: '#64748b' }}>风速</span>
+              <span style={{ 
+                fontWeight: '700', 
+                color: '#0f172a', 
+                fontSize: '16px',
+                background: 'rgba(59, 130, 246, 0.1)',
+                padding: '2px 6px',
+                borderRadius: '6px'
+              }}>
+                {tooltip.data.speed} m/s
+              </span>
+            </div>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#64748b' }}>风向</span>
+              <span style={{ fontWeight: '500' }}>
+                {tooltip.data.directionName} <span style={{ color: '#94a3b8' }}>({tooltip.data.direction}°)</span>
+              </span>
+            </div>
+          </div>
+
+          <div style={{ 
+            marginTop: '12px', 
+            paddingTop: '8px', 
+            borderTop: '1px solid rgba(0, 0, 0, 0.06)',
+            display: 'grid', 
+            gridTemplateColumns: '1fr 1fr', 
+            gap: '8px',
+            fontSize: '12px',
+            color: '#64748b'
+          }}>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#94a3b8' }}>U Component</span>
+              <span style={{ fontFamily: 'monospace' }}>{tooltip.data.u} m/s</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#94a3b8' }}>V Component</span>
+              <span style={{ fontFamily: 'monospace' }}>{tooltip.data.v} m/s</span>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

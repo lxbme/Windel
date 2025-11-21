@@ -54,6 +54,7 @@ const WindApp = () => {
   const [tempSettings, setTempSettings] = useState(settings);
   const [visualizationKey, setVisualizationKey] = useState(0);
   const visualizationRef = useRef(null);
+  const [vizHeight, setVizHeight] = useState('auto');
 
   // 处理 batch 改变
   const handleBatchChange = (newBatch) => {
@@ -76,6 +77,43 @@ const WindApp = () => {
     setSettings(newSettings);
   };
 
+  // 监听左侧可视化区域高度变化
+  useEffect(() => {
+    const updateHeight = () => {
+      if (visualizationRef.current) {
+        const height = visualizationRef.current.offsetHeight;
+        setVizHeight(`${height}px`);
+      }
+    };
+
+    // 初始化
+    updateHeight();
+
+    // 监听窗口大小变化
+    window.addEventListener('resize', updateHeight);
+    
+    // 使用 MutationObserver 监听 DOM 变化
+    const observer = new MutationObserver(updateHeight);
+    if (visualizationRef.current) {
+      observer.observe(visualizationRef.current, {
+        childList: true,
+        subtree: true,
+        attributes: true
+      });
+    }
+
+    // 延迟更新以确保渲染完成
+    const timer = setTimeout(updateHeight, 100);
+    const interval = setInterval(updateHeight, 500);
+
+    return () => {
+      window.removeEventListener('resize', updateHeight);
+      observer.disconnect();
+      clearTimeout(timer);
+      clearInterval(interval);
+    };
+  }, [visualizationKey]);
+
   // 获取最大日期
   const getMaxDate = () => {
     const today = new Date();
@@ -85,7 +123,7 @@ const WindApp = () => {
   };
 
   return (
-    <div className="flex h-screen w-full bg-[#F5F9FC] overflow-hidden relative font-sans text-slate-700">
+    <div className="min-h-screen w-full bg-[#F5F9FC] relative font-sans text-slate-700">
       
       {/* --- 背景动效 (与 LandingPage 保持一致但更淡) --- */}
       <div className="fixed inset-0 z-0 pointer-events-none opacity-50">
@@ -93,38 +131,39 @@ const WindApp = () => {
         <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-cyan-200/30 rounded-full blur-[100px] mix-blend-multiply" />
       </div>
 
-      {/* --- 左侧：风场可视化区域 --- */}
-      <div className="flex-1 h-full p-4 pl-4 pr-0 z-10 relative">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-          className="w-full h-full rounded-[2rem] overflow-hidden shadow-2xl shadow-blue-900/5 border border-white/60 bg-white relative group"
-        >
-          {/* 返回按钮 (悬浮在地图左上角) */}
-          <button 
-            onClick={() => navigate('/')}
-            className="absolute top-6 left-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/80 backdrop-blur-md border border-white/50 text-slate-600 font-medium shadow-lg shadow-slate-200/50 hover:bg-white hover:text-blue-600 hover:scale-105 transition-all group-hover:translate-y-0 translate-y-[-100px] opacity-0 group-hover:opacity-100 duration-300"
-            style={{ transform: 'none', opacity: 1 }} // 暂时强制显示，或者只在 hover 时显示
+      <div className="flex w-full p-4 gap-4 relative z-10">
+        {/* --- 左侧：风场可视化区域 (固定80%宽度) --- */}
+        <div className="w-[75%] relative">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+            className="w-full rounded-[2rem] overflow-hidden shadow-2xl shadow-blue-900/5 border border-white/60 bg-white relative group"
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back Home</span>
-          </button>
+            {/* 返回按钮 (悬浮在地图左上角) */}
+            <button 
+              onClick={() => navigate('/')}
+              className="absolute top-6 left-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/80 backdrop-blur-md border border-white/50 text-slate-600 font-medium shadow-lg shadow-slate-200/50 hover:bg-white hover:text-blue-600 hover:scale-105 transition-all"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back Home</span>
+            </button>
 
-          {/* 可视化组件 */}
-          <div ref={visualizationRef} className="w-full h-full">
-            <WindFieldVisualization key={visualizationKey} settings={settings} />
-          </div>
-        </motion.div>
-      </div>
+            {/* 可视化组件 */}
+            <div ref={visualizationRef} className="w-full">
+              <WindFieldVisualization key={visualizationKey} settings={settings} />
+            </div>
+          </motion.div>
+        </div>
 
-      {/* --- 右侧：设置面板 --- */}
-      <motion.div 
-        initial={{ x: 20, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        transition={{ delay: 0.2, duration: 0.5 }}
-        className="w-96 h-full p-4 z-20 flex flex-col"
-      >
+        {/* --- 右侧：设置面板 (固定宽度，高度跟随左侧) --- */}
+        <motion.div 
+          initial={{ x: 20, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+          className="flex-1 flex flex-col"
+          style={{ height: vizHeight }}
+        >
         <div className="flex-1 flex flex-col bg-white/60 backdrop-blur-xl rounded-[2rem] border border-white/60 shadow-2xl shadow-blue-900/5 overflow-hidden">
           
           {/* 面板头部 */}
@@ -347,6 +386,7 @@ const WindApp = () => {
 
         </div>
       </motion.div>
+      </div>
     </div>
   );
 };
