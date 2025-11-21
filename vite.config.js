@@ -17,6 +17,10 @@ export default defineConfig({
       '/typhoon': {
         target: 'http://localhost:8080',
         changeOrigin: true,
+      },
+      '/daterange': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
       }
     }
   }
